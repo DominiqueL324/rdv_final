@@ -21,22 +21,23 @@ from django.core.mail import send_mail
 from rest_framework.authtoken.models import Token
 from datetime import date, datetime,time,timedelta
 from django.db import transaction, IntegrityError
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import LimitOffsetPagination,PageNumberPagination
 
 class RDVApi(APIView):
 
-    pagination_class=LimitOffsetPagination
+    pagination_class=PageNumberPagination
     serializer_class= RendezVousSerializer
     queryset = RendezVous.objects.all()
+    paginator = pagination_class()
 
     def get(self,request):
-        page = self.paginate_queryset(self.queryset)
-        if page is not None:
+        page = self.paginator.paginate_queryset(self.queryset,request,view=self)
+        """if page is not None:
             serializer = self.serializer_class(page, many=True)
-            return self.get_paginated_response(serializer.data)
+            return self.get_paginated_response(serializer.data)"""
         #rdv = RendezVous.objects.all()
-        #serializer = RendezVousSerializer(rdv,many=True)
-        #return Response(serializer.data,status=status.HTTP_200_OK)
+        serializer = RendezVousSerializer(page,many=True)
+        return self.paginator.get_paginated_response(serializer.data)
 
     def post(self,request):
         data = request.data
@@ -89,7 +90,7 @@ class RDVApi(APIView):
             rdv = RendezVous.objects.filter(pk=rdv.id)
             serializer = RendezVousSerializer(rdv,many=True)
             return Response(serializer.data,status=status.HTTP_201_CREATED)
-    @property
+    """@property
     def paginator(self):
         if not hasattr(self, '_paginator'):
             if self.pagination_class is None:
@@ -105,7 +106,7 @@ class RDVApi(APIView):
 
     def get_paginated_response(self,data):
         assert self.paginator is not None
-        return self.paginator.get_paginated_response(data)
+        return self.paginator.get_paginated_response(data)"""
 
 class RDVApiDetails(APIView):
 
@@ -202,33 +203,34 @@ class RDVApiDetails(APIView):
 
 class RDVReportedApi(APIView):
 
-    pagination_class=LimitOffsetPagination
+    pagination_class=PageNumberPagination
     serializer_class= RdvReporteDateSerializer
     queryset = ""
+    paginator =  pagination_class() 
     
     def get(self,request):
         data = request.data 
         id = request.GET.get("rdv",None)
         if id is not None:
             self.queryset = RdvReporteDate.objects.filter(rdv=RendezVous.objects.filter(pk=int(id)).first())
-            page = self.paginate_queryset(self.queryset)
-            if page is not None:
-                serializer = self.serializer_class(page, many=True)
-                return self.get_paginated_response(serializer.data)
+            page = self.paginator.paginate_queryset(self.queryset,request,view=self)
+            #if page is not None:
+            serializer = self.serializer_class(page, many=True)
+            return self.paginator.get_paginated_response(serializer.data)
             #if reported.exists():
                 #serializer = RdvReporteDateSerializer(reported,many=True)
                 #return Response(serializer.data,status = status.HTTP_200_OK)
             #else:
                 #return Response({"status":"none"},status = status.HTTP_200_OK)
         self.queryset = RdvReporteDate.objects.all()
-        page = self.paginate_queryset(self.queryset)
-        if page is not None:
-            serializer = self.serializer_class(page, many=True)
-            return self.get_paginated_response(serializer.data)
+        page = self.paginator.paginate_queryset(self.queryset,request,view=self)
+        #if page is not None:
+        serializer = self.serializer_class(page, many=True)
+        return self.paginator.get_paginated_response(serializer.data)
         #reported = 
         #serializer = RdvReporteDateSerializer(reported,many=True)
         #return Response(serializer.data,status = status.HTTP_200_OK)
-    @property
+    """@property
     def paginator(self):
         if not hasattr(self, '_paginator'):
             if self.pagination_class is None:
@@ -244,13 +246,14 @@ class RDVReportedApi(APIView):
 
     def get_paginated_response(self,data):
         assert self.paginator is not None
-        return self.paginator.get_paginated_response(data)
+        return self.paginator.get_paginated_response(data)"""
 
 class RDVReportedAgentApi(APIView):
 
-    pagination_class=LimitOffsetPagination
+    pagination_class=PageNumberPagination
     serializer_class= RdvReporteAgentSerializer
     queryset = ""
+    paginator = pagination_class()
 
     def get(self,request):
         data = request.data 
@@ -258,20 +261,20 @@ class RDVReportedAgentApi(APIView):
         if id is not None:
             self.queryset = RdvReporteAgent.objects.filter(rdv=RendezVous.objects.filter(pk=int(id)).first() )
             #reported = 
-            page = self.paginate_queryset(self.queryset)
-            if page is not None:
-                serializer = self.serializer_class(page, many=True)
-                return self.get_paginated_response(serializer.data)
+            page = self.paginator.paginate_queryset(self.queryset,request,view=self)
+            #if page is not None:
+            serializer = self.serializer_class(page, many=True)
+            return self.paginator.get_paginated_response(serializer.data)
             """if reported.exists():
                 serializer = RdvReporteAgentSerializer(reported,many=True)
                 return Response(serializer.data,status = status.HTTP_200_OK)
             else:
                 return Response({"status":"none"},status = status.HTTP_200_OK)"""
         self.queryset = RdvReporteAgent.objects.all()
-        page = self.paginate_queryset(self.queryset)
-        if page is not None:
-            serializer = self.serializer_class(page, many=True)
-            return self.get_paginated_response(serializer.data)
+        page = self.paginator.paginate_queryset(self.queryset,request,view=self)
+        #if page is not None:
+        serializer = self.serializer_class(page, many=True)
+        return self.paginator.get_paginated_response(serializer.data)
 
         #serializer = RdvReporteAgentSerializer(reported,many=True)
         #return Response(serializer.data,status = status.HTTP_200_OK)

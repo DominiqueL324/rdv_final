@@ -1,3 +1,4 @@
+from django import views
 from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.http import JsonResponse
@@ -21,19 +22,20 @@ from django.core.mail import send_mail
 from rest_framework.authtoken.models import Token
 from datetime import date, datetime,time,timedelta
 from django.db import transaction, IntegrityError
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import LimitOffsetPagination,PageNumberPagination
 
 class TypeProprieteApi(APIView):
 
-    pagination_class=LimitOffsetPagination
+    pagination_class=PageNumberPagination
     serializer_class= TypeProprieteSerializer
     queryset = TypePropriete.objects.all()
+    paginator = pagination_class()
 
     def get(self,request):
-        page = self.paginate_queryset(self.queryset)
-        if page is not None:
-            serializer = self.serializer_class(page, many=True)
-            return self.get_paginated_response(serializer.data)
+        page = self.paginator.paginate_queryset(self.queryset,request,view=self)
+        #if page is not None:
+        serializer = self.serializer_class(page, many=True)
+        return self.paginator.get_paginated_response(serializer.data)
        #propriete = TypePropriete.objects.all()
         #serializer = TypeProprieteSerializer(propriete,many=True)
         #return Response(serializer.data,status=status.HTTP_200_OK)
@@ -51,7 +53,7 @@ class TypeProprieteApi(APIView):
             serializer = TypeProprieteSerializer(propriete,many=True)
             return Response(serializer.data,status=status.HTTP_201_CREATED)
 
-    @property
+    """@property
     def paginator(self):
         if not hasattr(self, '_paginator'):
             if self.pagination_class is None:
@@ -67,7 +69,7 @@ class TypeProprieteApi(APIView):
 
     def get_paginated_response(self,data):
         assert self.paginator is not None
-        return self.paginator.get_paginated_response(data)
+        return self.paginator.get_paginated_response(data)"""
 
 class TypeProprieteApiDetails(APIView):
 

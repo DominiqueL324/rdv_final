@@ -21,19 +21,20 @@ from django.core.mail import send_mail
 from rest_framework.authtoken.models import Token
 from datetime import date, datetime,time,timedelta
 from django.db import transaction, IntegrityError
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import LimitOffsetPagination,PageNumberPagination
 
 class InterventionApi(APIView):
 
-    pagination_class = LimitOffsetPagination
+    pagination_class = PageNumberPagination
     queryset = TypeIntervention.objects.all()
     serializer_class = TypeInterventionSerializer
+    paginator = pagination_class()
 
     def get(self,request):
-        page = self.paginate_queryset(self.queryset)
-        if page is not None:
-            serializer = self.serializer_class(page, many=True)
-            return self.get_paginated_response(serializer.data)
+        page = self.paginator.paginate_queryset(self.queryset,request,view=self)
+        #if page is not None:
+        serializer = self.serializer_class(page, many=True)
+        return self.paginator.get_paginated_response(serializer.data)
         #interventions = TypeIntervention.objects.all()
         #serializer = TypeInterventionSerializer(interventions,many=True)
         #return Response(serializer.data,status=status.HTTP_200_OK)
@@ -50,7 +51,7 @@ class InterventionApi(APIView):
             intervention = TypeIntervention.objects.filter(pk=intervention.id)
             serializer = TypeInterventionSerializer(intervention,many=True)
             return Response(serializer.data,status=status.HTTP_201_CREATED)
-    @property
+    """@property
     def paginator(self):
         if not hasattr(self, '_paginator'):
             if self.pagination_class is None:
@@ -66,7 +67,7 @@ class InterventionApi(APIView):
 
     def get_paginated_response(self,data):
         assert self.paginator is not None
-        return self.paginator.get_paginated_response(data)
+        return self.paginator.get_paginated_response(data)"""
 
 
 class InterventionApiDetails(APIView):

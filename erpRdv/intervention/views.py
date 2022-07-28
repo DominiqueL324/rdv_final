@@ -31,6 +31,12 @@ class InterventionApi(APIView):
     paginator = pagination_class()
 
     def get(self,request):
+
+        if request.GET.get("paginated",None) is not None:
+            interventions = TypeIntervention.objects.all()
+            serializer = TypeInterventionSerializer(interventions,many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+            
         page = self.paginator.paginate_queryset(self.queryset,request,view=self)
         #if page is not None:
         serializer = self.serializer_class(page, many=True)

@@ -32,6 +32,11 @@ class TypeProprieteApi(APIView):
     paginator = pagination_class()
 
     def get(self,request):
+        if request.GET.get("paginated",None) is not None:
+            propriete = TypePropriete.objects.all()
+            serializer = TypeProprieteSerializer(propriete,many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+            
         page = self.paginator.paginate_queryset(self.queryset,request,view=self)
         #if page is not None:
         serializer = self.serializer_class(page, many=True)

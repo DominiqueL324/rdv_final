@@ -42,6 +42,7 @@ class Propriete(models.Model):
     numeroSol = models.CharField("Numéro de sol",max_length=100,null=True)
     bailleur = models.OneToOneField(Bailleur,on_delete=models.CASCADE,null=True,related_name="bailleur")
     locataire = models.OneToOneField(Locataire,on_delete=models.CASCADE,null=True,related_name="locataire")
+    type = models.CharField("Type de bien",max_length=50,null=True)
     type_propriete = models.ForeignKey(TypePropriete,on_delete=models.CASCADE,null=True,related_name="type_de_propriete")
 
 class TypeIntervention(models.Model):
@@ -61,6 +62,9 @@ class RendezVous(models.Model):
     agent = models.IntegerField("Agent responsable du RDV",null=False)
     longitude = models.CharField("longitude",max_length=100,null=True)
     latitude = models.CharField("latitude",max_length=100,null=True)
+    liste_document_recuperer = models.CharField("liste de document à recupérer",max_length=200,null=True)
+    consignes_particuliere = models.CharField("Consignes particulière",max_length=200,null=True)
+    info_diverses = models.CharField("Informations diverses",max_length=300,null=True)
 
 class RdvReporteDate(models.Model):
     rdv = models.ForeignKey(RendezVous,on_delete=models.CASCADE,related_name="Rendez_vous_date")

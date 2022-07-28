@@ -31,6 +31,14 @@ class RDVApi(APIView):
     paginator = pagination_class()
 
     def get(self,request):
+
+        if(request.GET.get("user",None) is not None):
+            val_ = request.GET.get("user",None)
+            #users = User.objects.filter(email=val_)
+            rdvs = RendezVous.objects.filter(client=val_)
+            serializer = RendezVousSerializer(rdvs,many=True)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+
         page = self.paginator.paginate_queryset(self.queryset,request,view=self)
         """if page is not None:
             serializer = self.serializer_class(page, many=True)
@@ -71,6 +79,7 @@ class RDVApi(APIView):
                 numeroSol = data["numero_sol_propriete"],
                 bailleur = bailleur,
                 locataire = occupant,
+                type = data["type"],
                 type_propriete = TypePropriete.objects.filter(pk=int(data['type_propriete'])).first()
             )
 
@@ -85,7 +94,10 @@ class RDVApi(APIView):
                 passeur = int(data['passeur']),
                 agent = int(data['agent']),
                 longitude = data['longitude'],
-                latitude = data['latitude']
+                latitude = data['latitude'],
+                consignes_particuliere = data['consignes_part'],
+                liste_document_recuperer= data['list_documents'],
+                info_diverses = data['info_diverses']
             )
             rdv = RendezVous.objects.filter(pk=rdv.id)
             serializer = RendezVousSerializer(rdv,many=True)

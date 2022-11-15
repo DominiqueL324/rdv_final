@@ -22,6 +22,8 @@ from rest_framework.authtoken.models import Token
 from datetime import date, datetime,time,timedelta
 from django.db import transaction, IntegrityError
 from rest_framework.pagination import LimitOffsetPagination,PageNumberPagination
+from django.core.mail import send_mail
+from django.db.models import Q
 
 class RDVApi(APIView):
 
@@ -32,12 +34,182 @@ class RDVApi(APIView):
 
     def get(self,request):
 
+        if(request.GET.get('clientcount',None) is not None):
+            val_ = request.GET.get("clientcount",None)
+            rdv = RendezVous.objects.filter(client=int(val_)).count()
+            rdv_att = RendezVous.objects.filter(client=int(val_),statut=1).count()
+            rdv_val = RendezVous.objects.filter(statut__range=(2,4),client=int(val_)).count()
+            return JsonResponse({"Rdv":rdv,"rdv_attente":rdv_att,"rdv_valide":rdv_val},status=200)
+
+        if(request.GET.get('agentcount',None) is not None):
+            val_ = request.GET.get("agentcount",None)
+            rdv = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_)).count()
+            rdv_att = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_),statut=1).count()
+            rdv_val = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_),statut__range=(2,4)).count()
+            return JsonResponse({"Rdv":rdv,"rdv_attente":rdv_att,"rdv_valide":rdv_val},status=200)
+
+        if(request.GET.get('salariecount',None) is not None):
+            val_ = request.GET.get("salariecount",None)
+            rdv = RendezVous.objects.filter(passeur=int(val_)).count()
+            rdv_att = RendezVous.objects.filter(passeur=int(val_),statut=1).count()
+            rdv_val = RendezVous.objects.filter(statut__range=(2,4),passeur=int(val_)).count()
+            return JsonResponse({"Rdv":rdv,"rdv_attente":rdv_att,"rdv_valide":rdv_val},status=200)
+
+        if(request.GET.get('agentcountconst',None) is not None):
+            val_ = int(request.GET.get("agentcountconst",None))
+            rdv = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_)).count()
+            rdv_att = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_),statut=1).count()
+            rdv_val = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_),statut__range=(2,4)).count() 
+            return JsonResponse({"Rdv":rdv,"rdv_attente":rdv_att,"rdv_valide":rdv_val},status=200)
+        
+        if(request.GET.get('planneurcountconst',None) is not None):
+            val_ = int(request.GET.get("planneurcountconst",None))
+            rdv = RendezVous.objects.all().count()
+            rdv_att = RendezVous.objects.filter(statut=1).count()
+            rdv_val = RendezVous.objects.filter(statut__range=(2,4)).count()
+            return JsonResponse({"Rdv":rdv,"rdv_attente":rdv_att,"rdv_valide":rdv_val},status=200)
+
+
+        if(request.GET.get('admincount',None) is not None):
+            rdv = RendezVous.objects.count()
+            rdv_att = RendezVous.objects.filter(statut=1).count()
+            rdv_val = RendezVous.objects.filter(Q(statut=1)|Q(statut=2)|Q(statut=3)).count() 
+            return JsonResponse({"Rdv":rdv,"rdv_attente":rdv_att,"rdv_valide":rdv_val},status=200)
+            #return JsonResponse({"Rdv":rdv},status=200)
+
+
         if(request.GET.get("user",None) is not None):
             val_ = request.GET.get("user",None)
-            #users = User.objects.filter(email=val_)
-            rdvs = RendezVous.objects.filter(client=val_)
-            serializer = RendezVousSerializer(rdvs,many=True)
-            return Response(serializer.data,status=status.HTTP_200_OK)
+            query_set=""
+            if request.GET.get("debut",None) is not None and request.GET.get("fin",None) is not None:
+                query_set = RendezVous.objects.filter(client=int(val_),date__gte=datetime.strptime(request.GET.get("debut"),'%Y-%m-%d'),date__lte=datetime.strptime(request.GET.get("fin"),'%Y-%m-%d'))
+            else:
+                query_set = RendezVous.objects.filter(client=int(val_))
+            
+            if request.GET.get("en_charge",None) is not None:
+                cas = int(request.GET.get("en_charge",None))
+                if cas == 0:
+                    query_set = RendezVous.objects.filter(Q(statut=1) | Q(statut=float(1)),client=int(val_))
+                if cas == 1:
+                    query_set = RendezVous.objects.filter(Q(statut=2) | Q(statut=float(2)) | Q(statut=3) | Q(statut=float(3)) | Q(statut=4) | Q(statut=float(4)),client=int(val_))
+
+            
+            if request.GET.get("paginated",None) is not None:
+                serializer = RendezVousSerializer(query_set,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+
+            page = self.paginator.paginate_queryset(query_set,request,view=self)
+            serializer = RendezVousSerializer(page,many=True)
+            return self.paginator.get_paginated_response(serializer.data)
+
+        if(request.GET.get("agent",None) is not None):
+            val_ = request.GET.get("agent",None)
+            query_set=""
+            if request.GET.get("debut",None) is not None and request.GET.get("fin",None) is not None:
+                 query_set = RendezVous.objects.filter(Q(agent=int(val_)) | Q(agent_constat=int(val_)) | Q(agent_constat=float(val_)) | Q(audit_planneur=int(val_)),date__gte=datetime.strptime(request.GET.get("debut"),'%Y-%m-%d'),date__lte=datetime.strptime(request.GET.get("fin"),'%Y-%m-%d'))
+            else:
+                query_set = RendezVous.objects.filter( Q(agent=int(val_)) | Q(agent_constat=int(val_))| Q(audit_planneur=int(val_)) | Q(agent_constat=float(val_)) )
+            
+            if request.GET.get("en_charge",None) is not None:
+                cas = int(request.GET.get("en_charge",None))
+                if cas == 0:
+                    query_set = RendezVous.objects.filter(Q(statut=1) | Q(statut=float(1)),(Q(agent=int(val_)) | Q(agent_constat=int(val_))| Q(audit_planneur=int(val_)) | Q(agent_constat=float(val_))))
+                if cas == 1:
+                    query_set = RendezVous.objects.filter(Q(statut=2) | Q(statut=float(2)) | Q(statut=3) | Q(statut=float(3)) | Q(statut=4) | Q(statut=float(4)), (Q(agent=int(val_)) | Q(agent_constat=int(val_))| Q(audit_planneur=int(val_)) | Q(agent_constat=float(val_))))
+
+            if request.GET.get("paginated",None) is not None:
+                serializer = RendezVousSerializer(query_set,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+
+            page = self.paginator.paginate_queryset(query_set,request,view=self)
+            serializer = RendezVousSerializer(page,many=True)
+            return self.paginator.get_paginated_response(serializer.data)
+
+
+        if(request.GET.get("constat",None) is not None):
+            val_ = request.GET.get("constat",None)
+            query_set=""
+            if request.GET.get("debut",None) is not None and request.GET.get("fin",None) is not None:
+                query_set = RendezVous.objects.filter(Q(agent=int(val_)) | Q(agent_constat=int(val_)) | Q(agent_constat=float(val_))| Q(audit_planneur=int(val_)),date__gte=datetime.strptime(request.GET.get("debut"),'%Y-%m-%d'),date__lte=datetime.strptime(request.GET.get("fin"),'%Y-%m-%d'))
+            else:
+                query_set = RendezVous.objects.filter(Q(agent=int(val_)) | Q(agent_constat=int(val_)) | Q(agent_constat=float(val_)) | Q(audit_planneur=int(val_)))
+            
+            if request.GET.get("en_charge",None) is not None:
+                cas = int(request.GET.get("en_charge",None))
+                if cas == 0:
+                    query_set = RendezVous.objects.filter(Q(statut=1) | Q(statut=float(1)),(Q(agent=int(val_)) | Q(agent_constat=int(val_)) | Q(agent_constat=float(val_)) | Q(audit_planneur=int(val_))))
+                if cas == 1:
+                    query_set = RendezVous.objects.filter(Q(statut=2) | Q(statut=float(2)) | Q(statut=3) | Q(statut=float(3)) | Q(statut=4) | Q(statut=float(4)),(Q(agent=int(val_)) | Q(agent_constat=int(val_)) | Q(agent_constat=float(val_)) | Q(audit_planneur=int(val_))))
+                    
+            if request.GET.get("paginated",None) is not None:
+                serializer = RendezVousSerializer(query_set,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+
+            page = self.paginator.paginate_queryset(query_set,request,view=self)
+            serializer = RendezVousSerializer(page,many=True)
+            return self.paginator.get_paginated_response(serializer.data)
+
+        if(request.GET.get("planneur",None) is not None):
+            val_ = request.GET.get("constat",None)
+            query_set=""
+            if request.GET.get("debut",None) is not None and request.GET.get("fin",None) is not None:
+                 query_set = RendezVous.objects.filter(date__gte=datetime.strptime(request.GET.get("debut"),'%Y-%m-%d'),date__lte=datetime.strptime(request.GET.get("fin"),'%Y-%m-%d'))
+            else:
+                query_set = RendezVous.objects.all()
+            
+            if request.GET.get("paginated",None) is not None:
+                serializer = RendezVousSerializer(query_set,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+            
+            if request.GET.get("en_charge",None) is not None:
+                cas = int(request.GET.get("en_charge",None))
+                if cas == 0:
+                    query_set = RendezVous.objects.filter(statut=1)
+                if cas == 1:
+                    query_set = RendezVous.objects.filter(statut__range=(2,4))
+
+            page = self.paginator.paginate_queryset(query_set,request,view=self)
+            serializer = RendezVousSerializer(page,many=True)
+            return self.paginator.get_paginated_response(serializer.data)
+
+        if(request.GET.get("passeur",None) is not None):
+            val_ = request.GET.get("passeur",None)
+            query_set=""
+            if request.GET.get("debut",None) is not None and request.GET.get("fin",None) is not None:
+                query_set = RendezVous.objects.filter(passeur=int(val_),date__gte=datetime.strptime(request.GET.get("debut"),'%Y-%m-%d'),date__lte=datetime.strptime(request.GET.get("fin"),'%Y-%m-%d'))
+            else:
+                query_set = RendezVous.objects.filter(passeur=int(val_))
+            
+            if request.GET.get("paginated",None) is not None:
+                serializer = RendezVousSerializer(query_set,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+            if request.GET.get("en_charge",None) is not None:
+                cas = int(request.GET.get("en_charge",None))
+                if cas == 0:
+                    query_set = RendezVous.objects.filter(Q(statut=1) | Q(statut=float(1)),passeur=int(val_))
+                if cas == 1:
+                    query_set = RendezVous.objects.filter(Q(statut=2) | Q(statut=float(2)) | Q(statut=3) | Q(statut=float(3)) | Q(statut=4) | Q(statut=float(4)),passeur=int(val_))
+
+            page = self.paginator.paginate_queryset(query_set,request,view=self)
+            serializer = RendezVousSerializer(page,many=True)
+            return self.paginator.get_paginated_response(serializer.data)
+
+        
+        if request.GET.get("en_charge",None) is not None:
+            cas = int(request.GET.get("en_charge",None))
+            if cas == 0:
+                self.queryset = RendezVous.objects.filter(statut=1)
+            if cas == 1:
+                self.queryset = RendezVous.objects.filter(Q(statut=2) | Q(statut=float(2)) | Q(statut=3) | Q(statut=float(3)) | Q(statut=4) | Q(statut=float(4)))
+
+        if request.GET.get("debut",None) is not None and request.GET.get("fin",None) is not None:
+            query_set = RendezVous.objects.filter(date__gte=datetime.strptime(request.GET.get("debut"),'%Y-%m-%d'),date__lte=datetime.strptime(request.GET.get("fin"),'%Y-%m-%d'))
+            page = self.paginator.paginate_queryset(query_set,request,view=self)
+            serializer = RendezVousSerializer(page,many=True)
+            if request.GET.get("paginated",None) is not None:
+                serializer = RendezVousSerializer(query_set,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+            return self.paginator.get_paginated_response(serializer.data)
 
         page = self.paginator.paginate_queryset(self.queryset,request,view=self)
         """if page is not None:
@@ -80,8 +252,27 @@ class RDVApi(APIView):
                 bailleur = bailleur,
                 locataire = occupant,
                 type = data["type"],
+                ancien_locataire = data['ancien_locataire'],
                 type_propriete = TypePropriete.objects.filter(pk=int(data['type_propriete'])).first()
             )
+            couleur = ""
+            statut_=""
+            if int(data['statut']) == 1:
+                statut_ = "Attente prise en charge"
+                couleur="red"
+            elif int(data['statut']) == 2:
+                statut_ = "Prise en charge Attente horaire"
+                couleur="orange"
+            elif int(data['statut']) == 3:
+                statut_ = "Action requise"
+                couleur="blue"
+            elif int(data['statut']) == 4:
+                statut_ = "Annule"
+                couleur="yellow"
+            else:
+                statut_ = "Organise"
+                couleur="green"
+
 
             #création du RDV
             rdv = RendezVous.objects.create(
@@ -91,14 +282,38 @@ class RDVApi(APIView):
                 propriete = propriete,
                 client = int(data['client']),
                 date = data['date'],
-                passeur = int(data['passeur']),
-                agent = int(data['agent']),
-                longitude = data['longitude'],
-                latitude = data['latitude'],
+                #passeur = int(data['passeur']),
+                #agent = request.POST.get(),
+                #longitude = data['longitude'],
+                #latitude = data['latitude'],
                 consignes_particuliere = data['consignes_part'],
                 liste_document_recuperer= data['list_documents'],
-                info_diverses = data['info_diverses']
+                info_diverses = data['info_diverses'],
+                statut=data['statut'],
+                couleur = couleur
             )
+            if request.POST.get("passeur",None) is not None:
+                rdv.passeur = int(data['passeur'])
+            
+            if request.POST.get("longitude",None) is not None:
+                rdv.longitude = int(data['longitude'])
+            
+            if request.POST.get("latitude",None) is not None:
+                rdv.latitude = int(data['latitude'])
+            
+            if request.POST.get("agent",None) is not None:
+                rdv.agent = int(data['agent'])
+            
+            if request.POST.get("agent_constat",None) is not None:
+                rdv.agent_constat = int(data['agent_constat'])
+
+            if request.POST.get("audit_planneur",None) is not None:
+                rdv.passeur = int(data['audit_planneur'])
+
+
+
+            rdv.save()
+                
             rdv = RendezVous.objects.filter(pk=rdv.id)
             serializer = RendezVousSerializer(rdv,many=True)
             return Response(serializer.data,status=status.HTTP_201_CREATED)
@@ -140,6 +355,23 @@ class RDVApiDetails(APIView):
             bailleur = propriete.bailleur
             old_date = rdv.date
             old_agent = rdv.agent
+            if(request.POST.get("cas",None) is not None):
+                rdv.agent_constat = int(data['agent_constat'])
+                rdv.audit_planneur = int(data['audit_planneur'])
+                rdv.save()
+                rdv = RendezVous.objects.filter(pk=id)
+                serializer = RendezVousSerializer(rdv,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+
+            if(request.POST.get("final",None) is not None):
+                rdv.date = data['date']
+                rdv.statut = 4
+                rdv.couleur = "green"
+                rdv.save()
+                rdv = RendezVous.objects.filter(pk=id)
+                serializer = RendezVousSerializer(rdv,many=True)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+
             with transaction.atomic():
                 #edition du bailleur
                 bailleur.nom=data['nom_bailleur']
@@ -170,20 +402,57 @@ class RDVApiDetails(APIView):
                 propriete.type_propriete = TypePropriete.objects.filter(pk=int(data['type_propriete'])).first()
                 propriete.save()
 
+                if request.POST.get('statut',None) is not None:
+                    statut_=""
+                    couleur = ""
+                    if int(data['statut']) == 1:
+                        statut_ = "Attente prise en charge"
+                        couleur="red"
+                    elif int(data['statut']) == 2:
+                        statut_ = "Prise en charge Attente horaire"
+                        couleur="orange"
+                    elif int(data['statut']) == 3:
+                        statut_ = "Action requise"
+                        couleur="blue"
+                    elif int(data['statut']) == 4:
+                        statut_ = "Organise"
+                        couleur="green"
+                    else:
+                        statut_ = "Annulé"
+                        couleur="yellow"
+                    rdv.statut = data['statut']
+                    rdv.couleur = couleur
+
                 #edition du RDV
                 rdv.ref_lot = data['ref_lot']
+                
                 rdv.ref_rdv_edl = data['ref_edl']
                 rdv.intervention = TypeIntervention.objects.filter(pk=int(data['intervention'])).first()
                 rdv.propriete = propriete
-                rdv.client = int(data['client'])
+                #rdv.client = int(data['client'])
                 rdv.date = data['date']
-                rdv.passeur = int(data['passeur'])
-                rdv.agent = int(data['agent'])
-                rdv.longitude = data['longitude']
-                rdv.latitude = data['latitude']
+                #rdv.passeur = request.POST.get("passeur",None)
+                #rdv.agent = request.POST.get("agent",None)
+                #rdv.longitude = data['longitude']
+                #rdv.latitude = data['latitude']
+                rdv.liste_document_recuperer = data['consignes_part'] 
+                rdv.consignes_particuliere = data['list_documents']
+                rdv.info_diverses = data['info_diverses']
                 rdv.save()
 
-                if rdv.agent != old_agent:
+                if request.POST.get("passeur",None) is not None:
+                    rdv.passeur = int(data['passeur'])
+                
+                if request.POST.get("agent",None) is not None:
+                    rdv.agent = int(data['agent'])
+                
+                if request.POST.get("agent_constat",None) is not None:
+                    rdv.agent_constat = int(data['agent_constat'])
+
+                if request.POST.get("audit_planneur",None) is not None:
+                    rdv.passeur = int(data['audit_planneur'])
+
+                """if rdv.agent != old_agent:
                     RdvReporteAgent.objects.create(
                         rdv= rdv,
                         ancien_agent = old_agent
@@ -192,7 +461,7 @@ class RDVApiDetails(APIView):
                     RdvReporteDate.objects.create(
                         rdv = rdv,
                         ancienneDate = old_date
-                    )
+                    )"""
 
                 rdv = RendezVous.objects.filter(pk=id)
                 serializer = RendezVousSerializer(rdv,many=True)

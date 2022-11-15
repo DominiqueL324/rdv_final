@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-rw4ke79&xg^1wz7ev%$klmd8&cg#x!pzjy^*ek0-=-y)ljm6!2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["127.0.0.1","localhost","195.15.218.172"]
 
 
 # Application definition
@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'rdv',
     'intervention',
     'type_propriete',
+    'import',
+    'tri',
 ]
 
 MIDDLEWARE = [
@@ -125,9 +127,18 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DATA_UPLOAD_MAX_NUMBER_FIELDS = None
 
 #Pagination
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS':'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE':10
+    'PAGE_SIZE':30
 }
+
+#email config
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "saravincent@amexpert.biz "
+EMAIL_HOST_PASSWORD = "Luc123!luc123!"

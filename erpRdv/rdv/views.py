@@ -43,9 +43,9 @@ class RDVApi(APIView):
 
         if(request.GET.get('agentcount',None) is not None):
             val_ = request.GET.get("agentcount",None)
-            rdv = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_)).count()
-            rdv_att = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_),statut=1).count()
-            rdv_val = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_),statut__range=(2,4)).count()
+            rdv = RendezVous.objects.filter(agent=val_).count()
+            rdv_att = RendezVous.objects.filter(agent=val_,statut=1).count()
+            rdv_val = RendezVous.objects.filter(agent=val_,statut__range=(2,4)).count()
             return JsonResponse({"Rdv":rdv,"rdv_attente":rdv_att,"rdv_valide":rdv_val},status=200)
 
         if(request.GET.get('salariecount',None) is not None):
@@ -57,9 +57,9 @@ class RDVApi(APIView):
 
         if(request.GET.get('agentcountconst',None) is not None):
             val_ = int(request.GET.get("agentcountconst",None))
-            rdv = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_)).count()
-            rdv_att = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_),statut=1).count()
-            rdv_val = RendezVous.objects.filter(Q(agent_constat=val_)|Q(agent=val_)|Q(audit_planneur=val_),statut__range=(2,4)).count() 
+            rdv = RendezVous.objects.filter(Q(agent_constat=val_)|Q(audit_planneur=val_)).count()
+            rdv_att = RendezVous.objects.filter(Q(agent_constat=val_)|Q(audit_planneur=val_),statut=1).count()
+            rdv_val = RendezVous.objects.filter(Q(agent_constat=val_)|Q(audit_planneur=val_),statut__range=(2,4)).count() 
             return JsonResponse({"Rdv":rdv,"rdv_attente":rdv_att,"rdv_valide":rdv_val},status=200)
         
         if(request.GET.get('planneurcountconst',None) is not None):
@@ -308,7 +308,7 @@ class RDVApi(APIView):
                 rdv.agent_constat = int(data['agent_constat'])
 
             if request.POST.get("audit_planneur",None) is not None:
-                rdv.passeur = int(data['audit_planneur'])
+                rdv.audit_planneur = int(data['audit_planneur'])
 
 
 

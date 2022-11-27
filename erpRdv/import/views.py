@@ -68,8 +68,12 @@ class ImportApi(APIView):
                     created_at  = CreatedDate,
                     updated_at = CreatedDate
                 ) 
-            if int(data_["cible"]) == 3:
+            if int(data_["cible"]) == 3: 
                 #return JsonResponse({"status":data_["agent"]},status=200) 
+                for u in range(40):
+                     if liste[u] == "NULL":
+                        liste[u] = None
+
                 if type(liste[11]) != float:
                     CreatedDate=datetime(1990,1,1,12,12)
                 else:
@@ -85,11 +89,21 @@ class ImportApi(APIView):
                 else:
                     updatedat_ = datetime(*xlrd.xldate_as_tuple(liste[40],data.datemode))
                 
-                for u in range(40):
-                     if liste[u] == "NULL":
-                        liste[u] = None
-                with transaction.atomic():
-                    if CreatedDate.year == 2022:
+                """try:
+                    if liste[40] is not None:
+                            date_ = datetime(*xlrd.xldate_as_tuple(liste[40],data.datemode))
+                    else:
+                        date_ = None
+                except:
+                    return JsonResponse({"status":liste[40],"id":liste[0]},status=200)"""
+
+                
+                if int(liste[0])<22019:
+                    pass
+                else:
+                    #return JsonResponse({"status":liste[33]},status=200) 
+                    with transaction.atomic():
+                        #if CreatedDate.year == 2022:
                         bailleur = Bailleur.objects.create(
                             nom = liste[14],
                             prenom = liste[15],
@@ -128,7 +142,7 @@ class ImportApi(APIView):
                             propriete.type_propriete = TypePropriete.objects.filter(pk=int(liste[17])).first() 
                         else:
                             propriete.type_propriete = liste[17]
-                                         
+                                            
                         propriete.save()
                         
                         rdv = RendezVous.objects.create(
@@ -159,19 +173,21 @@ class ImportApi(APIView):
                         if liste[3] is not None:
                             rdv.passeur = int(liste[3])
                         if liste[4] is not None:
-                            rdv.agent = int(liste[4])
+                            liste_agent=[209,227,228,238,298,461,555,569,578,605,595,572]
+                            if int(liste[4]) in liste_agent:
+                                rdv.agent = int(liste[4])
+                            else:
+                                rdv.agent = 725
+                        else:
+                            rdv.agent = 725
+
                         if liste[37] is not None:
                             rdv.statut = int(liste[37])
                         if liste[2] is not None:
-                            rdv.ancien_client_id = int(liste[2])
+                            rdv.ancien_client_id = liste[2]
                         if liste[6] is not None:
                             rdv.agent_constat = int(liste[6])
 
-                        if liste[4] is None:
-                            rdv.agent = 690
-                        #for agent in  data_["agent"]:
-                            #if liste[4] is not None and agent[0] == int(liste[4]):
-                                #rdv.agent = agent['agent']
                         rdv.save
                         if liste[12] is not None:
                             rdv.intervention = TypeIntervention.objects.filter(pk=int(liste[12])).first()
